@@ -36,7 +36,7 @@ class _MainAppState extends State<MainApp> {
                 server!.close();
                 server = null;
               } else {
-                server = await shelf_io.serve(handler, '127.0.0.1', 8080);
+                server = await shelf_io.serve(handler, '0.0.0.0', 11690);
                 log('http://${server!.address.address}:${server!.port}');
               }
               isRunning = server != null;

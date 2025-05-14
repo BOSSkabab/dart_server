@@ -4,17 +4,30 @@ import 'dart:io';
 import 'package:shelf/shelf.dart';
 import 'package:http/http.dart' as http;
 
-const String videoDirectory =
-    '/Users/amitaskof/videos'; // Change this path to your actual video directory
+const String videoDirectory = 'C:/Users/Robotica';
 
 Future<Response> echoRequest(Request request) async {
   switch (request.url.path) {
+    case 'help':
+    case '':
+      return Response.ok('Available endpoints: /joke, /video?name=videoName, /videos');
+
     case 'joke':
-      return Response.ok(
-        jsonDecode(
-          (await http.get(Uri.parse("https://icanhazdadjoke.com/slack"))).body,
-        )["attachments"][0]["text"],
-      );
+      final jokeResponse = await http.get(Uri.parse("https://icanhazdadjoke.com/slack"), headers: {'Accept': 'application/json'});
+      final joke = jsonDecode(jokeResponse.body)["attachments"][0]["text"];
+      return Response.ok(joke);
+
+    case "videos":
+      final videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
+      final files = await Directory(videoDirectory).list().toList();
+      final videoFiles =
+          files
+              .whereType<File>()
+              .where((file) => videoExtensions.any((ext) => file.path.toLowerCase().endsWith(ext)))
+              .map((file) => file.path.split('\\').last)
+              .toList();
+      return Response.ok(jsonEncode(videoFiles), headers: {HttpHeaders.contentTypeHeader: ContentType.json.mimeType});
+
     case 'video':
       final videoName = request.url.queryParameters['name'];
       if (videoName == null) {
@@ -27,10 +40,8 @@ Future<Response> echoRequest(Request request) async {
       }
 
       final videoStream = file.openRead();
-      return Response.ok(
-        videoStream,
-        headers: {HttpHeaders.contentTypeHeader: 'video/mp4'},
-      );
+      return Response.ok(videoStream, headers: {HttpHeaders.contentTypeHeader: 'video/mp4'});
   }
-  return Response.ok('Request for "${request.url}"');
+
+  return Response.notFound('Request for "${request.url}" not found');
 }
